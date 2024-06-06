@@ -70,7 +70,7 @@ namespace FundamentalsSelenium
         /// <param name="time">Timespan</param>
         /// <returns>bool</returns>
         /// <exception cref="Exception"></exception>
-        public static bool ValidateElementExists(IWebElement element, string type, TimeSpan time)
+        public static bool ValidateElementExists(IWebDriver driver, By by, string type, TimeSpan time)
         {
 
             var s = new Stopwatch();
@@ -82,13 +82,13 @@ namespace FundamentalsSelenium
                 {
                     switch (type) {
                         case "displayed":
-                            if (element.Displayed) { return true; }
+                            if (driver.FindElement(by).Displayed) { return true; }
                         break;
                         case "enabled":
-                            if (element.Enabled) { return true; }
+                            if (driver.FindElement(by).Enabled) { return true; }
                             break;
                         case "selected":
-                            if (element.Selected) { return true; }
+                            if (driver.FindElement(by).Selected) { return true; }
                             break;
                     }
                 }
@@ -101,11 +101,45 @@ namespace FundamentalsSelenium
             return result;
         }
 
-        public static IWebElement WaitForElement(IWebDriver driver, By by, int timeWait = 0, int timePollingInterval = 0) {
-        
+        public static IWebElement WaitForElementDisplayed(IWebDriver driver, By by, TimeSpan timeWait, int timePollingInterval)
+        {
+            
+            IWebElement element = FluentWait(driver, by, timeWait, TimeSpan.FromMilliseconds(timePollingInterval));
+            bool exists;
+            if (!element.Displayed)
+            {
+                exists = ValidateElementExists(driver, by, "displayed", timeWait);
+                if (!exists) {
+                    Assert.Fail("Element doesn't display according time specified");                
+                          }
+            }
+            return element;
+            
         }
 
+        public static IList<IWebElement> WaitForListElementDisplayed(IWebDriver driver, By by, TimeSpan timeWait, TimeSpan timePollingInterval)
+        {
 
+            WebDriverWait wait = new(driver, timeWait)
+            {
+                PollingInterval = timePollingInterval
+            };
+            wait.IgnoreExceptionTypes(typeof(NoSuchElementException));
+
+            IList<IWebElement> elements = wait.Until((d) =>
+            {
+                foreach (var item in d.FindElements(by))
+                {
+                    if (!item.Displayed)
+                    {
+                        ValidateElementExists(driver, by, "displayed", timeWait);
+                    }
+                }
+                return d.FindElements(by);
+            });
+           return elements;
+
+        }
 
         /// <summary>
         /// Wait for page load after to display the title expected
